@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphony | PDF Audio Reader</title>
+    <meta name="description" content="A premium PDF reader that transforms your documents into high-quality speech.">
+    <!-- Google Fonts: Inter and Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+
+<body>
+    <div class="background-overlay"></div>
+
+    <div class="main-workspace">
+        <!-- Top Bar (Full Width) -->
+        <header class="top-bar">
+            <button id="sidebarToggle" class="sidebar-toggle-btn" title="Toggle Library">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <h1 class="top-logo">Symphony</h1>
+        </header>
+
+        <div class="workspace-body">
+            <!-- Sidebar (Inside Body) -->
+            <aside id="sidebar" class="sidebar">
+                <header class="sidebar-header">
+                    <h3>Library</h3>
+                    <button id="addDocBtn" class="add-doc-btn" title="Add New Document">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </header>
+                <div id="catalogList" class="catalog-list">
+                    <div class="empty-catalog">No documents yet</div>
+                </div>
+                <footer class="sidebar-footer">
+                    <button id="toggleSettings" class="settings-toggle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg>
+                        <span>Audio Settings</span>
+                    </button>
+                </footer>
+            </aside>
+
+            <!-- Reader Area -->
+            <main class="reader-area">
+                <section id="dropzone" class="upload-zone">
+                    <div class="upload-content">
+                        <div class="icon-pulse">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <h3>Upload your PDF</h3>
+                        <p>Drag & drop or <span class="browse-link">browse</span></p>
+                        <input type="file" id="fileInput" accept="application/pdf" hidden>
+                    </div>
+                </section>
+
+                <div id="playerControls" class="player-container hidden">
+                    <header class="reader-header">
+                        <div class="reader-info">
+                            <h2 id="fileName" class="reader-filename">document.pdf</h2>
+                            <span id="fileStats" class="reader-stats">0 words · 0 pages</span>
+                        </div>
+                        <div class="header-actions">
+                            <button id="closeDocBtn" class="action-btn" title="Close Document">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="reader-progress-bar">
+                        <div id="progressBarFill" class="progress-fill" style="width: 0%"></div>
+                    </div>
+
+                    <div class="reader-content-wrapper">
+                        <div class="reading-viewer" id="readingViewer">
+                            <p id="currentText" class="current-chunk"></p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Playback Bar (Full Width) -->
+        <footer id="playbackBar" class="playback-bar hidden">
+            <div class="playback-stats">
+                <span id="wordProgress">0 / 0 words</span>
+                <span id="progressPercent" class="percent-badge">0%</span>
+            </div>
+
+            <div class="main-controls">
+                <button id="fastPrevBtn" class="ctrl-btn" title="Back 10 chunks">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="11 17 6 12 11 7"></polyline>
+                        <polyline points="18 17 13 12 18 7"></polyline>
+                    </svg>
+                </button>
+                <button id="prevBtn" class="ctrl-btn" title="Back 1 chunk">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <button id="playBtn" class="play-pause-btn" title="Play/Pause">
+                    <svg id="playIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <svg id="pauseIcon" class="hidden" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16"></rect>
+                        <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                </button>
+                <button id="nextBtn" class="ctrl-btn" title="Forward 1 chunk">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+                <button id="fastNextBtn" class="ctrl-btn" title="Forward 10 chunks">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="playback-placeholder"></div> <!-- For balancing -->
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <aside id="settingsPanel" class="settings-modal hidden">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h3>Audio Settings</h3>
+                <button id="closeSettings" class="close-btn">&times;</button>
+            </div>
+
+            <div class="setting-group">
+                <label for="voiceSelect">Voice</label>
+                <select id="voiceSelect" class="styled-select"></select>
+            </div>
+
+            <div class="setting-group">
+                <div class="label-row">
+                    <label for="fontSizeRange">Font Size</label>
+                    <span id="fontSizeVal">1.2rem</span>
+                </div>
+                <input type="range" id="fontSizeRange" min="0.8" max="3" step="0.1" value="1.2">
+            </div>
+
+            <div class="setting-group">
+                <label>Text Alignment</label>
+                <div class="alignment-group">
+                    <button class="align-btn" data-align="left" title="Left Align">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="17" y1="10" x2="3" y2="10"></line>
+                            <line x1="21" y1="6" x2="3" y2="6"></line>
+                            <line x1="21" y1="14" x2="3" y2="14"></line>
+                            <line x1="17" y1="18" x2="3" y2="18"></line>
+                        </svg>
+                    </button>
+                    <button class="align-btn" data-align="justify" title="Justify">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="21" y1="10" x2="3" y2="10"></line>
+                            <line x1="21" y1="6" x2="3" y2="6"></line>
+                            <line x1="21" y1="14" x2="3" y2="14"></line>
+                            <line x1="21" y1="18" x2="3" y2="18"></line>
+                        </svg>
+                    </button>
+                    <button class="align-btn" data-align="right" title="Right Align">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="21" y1="10" x2="7" y2="10"></line>
+                            <line x1="21" y1="6" x2="3" y2="6"></line>
+                            <line x1="21" y1="14" x2="3" y2="14"></line>
+                            <line x1="21" y1="18" x2="7" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="label-row">
+                    <label for="rateRange">Speed</label>
+                    <span id="rateVal">1.0x</span>
+                </div>
+                <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1.0">
+            </div>
+
+            <div class="setting-group">
+                <div class="label-row">
+                    <label for="pitchRange">Pitch</label>
+                    <span id="pitchVal">1.0</span>
+                </div>
+                <input type="range" id="pitchRange" min="0.5" max="2" step="0.1" value="1.0">
+            </div>
+
+            <div class="setting-group">
+                <div class="label-row">
+                    <label for="volumeRange">Volume</label>
+                    <span id="volumeVal">100%</span>
+                </div>
+                <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="1.0">
+            </div>
+
+            <div class="setting-group checkbox-group">
+                <input type="checkbox" id="showTextToggle" checked>
+                <label for="showTextToggle">Display text during reading</label>
+            </div>
+
+            <div class="setting-group skip-phrases-group">
+                <label for="skipPhrasesInput">Skip Phrases (one per line)</label>
+                <textarea id="skipPhrasesInput" class="styled-textarea" placeholder="e.g. Page 1 of 50
+Copyright 2024
+Footer text..."></textarea>
+                <button id="applySkipPhrases" class="primary-btn mt-2">Apply to Current Book</button>
+            </div>
+        </div>
+    </aside>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

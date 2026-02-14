@@ -29,6 +29,7 @@ body {
     line-height: 1.6;
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
 }
 
 .background-overlay {
@@ -45,6 +46,7 @@ body {
     display: flex;
     width: 100%;
     height: 100vh;
+    height: 100dvh;
 }
 
 /* Sidebar Styling */
@@ -62,7 +64,6 @@ body {
 
 .sidebar.collapsed {
     transform: translateX(-100%);
-    margin-left: -280px;
     opacity: 0;
     pointer-events: none;
 }
@@ -83,13 +84,13 @@ body {
     letter-spacing: 0.025em;
 }
 
-.add-doc-btn {
-    background: var(--accent-primary);
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+.sidebar-settings-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--glass-border);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -97,9 +98,17 @@ body {
     transition: all 0.2s;
 }
 
-.add-doc-btn:hover {
-    background: var(--accent-secondary);
-    transform: translateY(-1px);
+.sidebar-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    transform: rotate(30deg);
+}
+
+@media (max-width: 768px) {
+    .sidebar-settings-btn {
+        width: 44px;
+        height: 44px;
+    }
 }
 
 .catalog-list {
@@ -155,6 +164,32 @@ body {
     color: var(--text-secondary);
 }
 
+.add-new-item {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px dashed rgba(99, 102, 241, 0.3);
+    color: var(--accent-primary);
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.add-new-item:hover {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+.add-new-item svg {
+    color: var(--accent-primary);
+}
+
 .sidebar-footer {
     padding: 1.25rem;
     border-top: 1px solid var(--glass-border);
@@ -186,6 +221,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -638,12 +674,85 @@ input[type="range"] {
     font-weight: 500;
 }
 
-@media (max-width: 768px) {
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
     .sidebar {
-        position: absolute;
+        width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    .sidebar {
+        position: fixed;
         height: 100%;
         left: 0;
         top: 0;
+        width: 280px;
+        box-shadow: 20px 0 50px rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        /* Ensure sidebar is above top-bar (z-index 50) on mobile */
+    }
+
+    .sidebar-scrim {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 35;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar-scrim.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .top-bar {
+        padding: 0 1rem;
+        gap: 1rem;
+    }
+
+    .top-logo {
+        font-size: 1.25rem;
+    }
+
+    .reader-area {
+        padding-bottom: var(--playback-bar-height);
+        /* Ensure content isn't hidden by bar */
+    }
+
+    .reader-header {
+        padding: 1rem 1.25rem;
+    }
+
+    .reader-info {
+        max-width: 70%;
+    }
+
+    .reader-filename {
+        font-size: 1.1rem;
+    }
+
+    .reader-content-wrapper {
+        padding: 1rem;
+    }
+
+    .reading-viewer {
+        padding: 1.5rem;
+        border-radius: 16px;
+    }
+
+    .current-chunk {
+        font-size: 1.1rem;
     }
 
     .playback-stats {
@@ -655,6 +764,62 @@ input[type="range"] {
     }
 
     .playback-bar {
+        padding: 0 1rem;
         justify-content: center;
+        height: calc(var(--playback-bar-height) - 10px);
+    }
+
+    .main-controls {
+        gap: 0.5rem;
+    }
+
+    .ctrl-btn {
+        padding: 0.35rem;
+    }
+
+    .ctrl-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .play-pause-btn {
+        width: 44px;
+        height: 44px;
+        box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+    }
+
+    .play-pause-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .settings-content {
+        width: 95%;
+        padding: 1.5rem;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-logo {
+        display: none;
+        /* Hide logo on very small screens if it competes with title */
+    }
+
+    .sidebar {
+        width: 85%;
+    }
+
+    .playback-bar {
+        padding: 0 0.5rem;
+    }
+
+    .main-controls {
+        gap: 0.25rem;
+    }
+
+    .reader-area {
+        padding-bottom: calc(var(--playback-bar-height) + 10px);
     }
 }

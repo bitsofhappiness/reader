@@ -84,6 +84,7 @@ const state = {
         pitch: 1.0,
         volume: 1.0,
         fontSize: 1.2,
+        chunkSize: 50,
         textAlign: 'justify',
         showText: true,
         skipPhrases: [] // Array of phrases to remove
@@ -110,7 +111,7 @@ const elements = {
     nextBtn: document.getElementById('nextBtn'),
     fastPrevBtn: document.getElementById('fastPrevBtn'),
     fastNextBtn: document.getElementById('fastNextBtn'),
-    toggleSettings: document.getElementById('toggleSettings'),
+    sidebarSettingsBtn: document.getElementById('sidebarSettingsBtn'),
     settingsPanel: document.getElementById('settingsPanel'),
     closeSettings: document.getElementById('closeSettings'),
     voiceSelect: document.getElementById('voiceSelect'),
@@ -127,11 +128,13 @@ const elements = {
     readingViewer: document.getElementById('readingViewer'),
     currentText: document.getElementById('currentText'),
     closeDocBtn: document.getElementById('closeDocBtn'),
-    addDocBtn: document.getElementById('addDocBtn'),
     catalogList: document.getElementById('catalogList'),
     playbackBar: document.getElementById('playbackBar'),
     skipPhrasesInput: document.getElementById('skipPhrasesInput'),
-    applySkipPhrases: document.getElementById('applySkipPhrases')
+    applySkipPhrases: document.getElementById('applySkipPhrases'),
+    sidebarScrim: document.getElementById('sidebarScrim'),
+    chunkSizeRange: document.getElementById('chunkSizeRange'),
+    chunkSizeVal: document.getElementById('chunkSizeVal')
 };
 
 // --- Initialization ---
@@ -201,23 +204,49 @@ elements.fileInput.addEventListener('change', (e) => {
 });
 
 // Control Logic
-elements.sidebarToggle.addEventListener('click', () => {
-    elements.sidebar.classList.toggle('collapsed');
-});
+elements.sidebarToggle.addEventListener('click', toggleSidebar);
+elements.sidebarScrim.addEventListener('click', closeSidebar);
+
+function toggleSidebar() {
+    const isCollapsed = elements.sidebar.classList.contains('collapsed');
+    if (isCollapsed) {
+        openSidebar();
+    } else {
+        closeSidebar();
+    }
+}
+
+function openSidebar() {
+    elements.sidebar.classList.remove('collapsed');
+    if (window.innerWidth <= 768) {
+        elements.sidebarScrim.classList.add('visible');
+    }
+}
+
+function closeSidebar() {
+    elements.sidebar.classList.add('collapsed');
+    elements.sidebarScrim.classList.remove('visible');
+}
 elements.playBtn.addEventListener('click', togglePlayback);
 elements.prevBtn.addEventListener('click', () => navigateChunk(-1));
 elements.nextBtn.addEventListener('click', () => navigateChunk(1));
 elements.fastPrevBtn.addEventListener('click', () => navigateChunk(-10));
 elements.fastNextBtn.addEventListener('click', () => navigateChunk(10));
 elements.closeDocBtn.addEventListener('click', closeDocument);
-elements.addDocBtn.addEventListener('click', async () => {
+const addNewDocHandler = async () => {
     if (state.currentDocID) await saveState();
     await stopPlayback();
+    closeSidebar();
     showUploadZone();
-});
+};
+
+// Global click delegation for dynamically added elements if needed, 
+// but local attachment in updateCatalogUI is preferred.
 
 // Settings Logic
-elements.toggleSettings.addEventListener('click', () => elements.settingsPanel.classList.remove('hidden'));
+elements.sidebarSettingsBtn.addEventListener('click', () => {
+    elements.settingsPanel.classList.remove('hidden');
+});
 elements.closeSettings.addEventListener('click', () => elements.settingsPanel.classList.add('hidden'));
 
 elements.voiceSelect.addEventListener('change', async (e) => {
@@ -264,6 +293,19 @@ elements.fontSizeRange.addEventListener('input', (e) => {
     elements.fontSizeVal.textContent = state.settings.fontSize + 'rem';
     elements.currentText.style.fontSize = state.settings.fontSize + 'rem';
     saveState();
+});
+
+elements.chunkSizeRange.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    state.settings.chunkSize = val;
+    elements.chunkSizeVal.textContent = val + ' words';
+});
+
+elements.chunkSizeRange.addEventListener('change', async () => {
+    await saveState();
+    if (state.currentDocID && state.unfilteredFullText) {
+        await reProcessText();
+    }
 });
 
 elements.alignBtns.forEach(btn => {
@@ -434,11 +476,38 @@ async function reProcessText() {
 function chunkText(text) {
     const words = text.split(/\s+/).filter(w => w !== '');
     state.chunks = [];
-    const chunkSize = 50;
+    const softLimit = state.settings.chunkSize || 50;
+    const lookAhead = 30;
 
-    for (let i = 0; i < words.length; i += chunkSize) {
-        const chunk = words.slice(i, i + chunkSize).join(' ');
+    let i = 0;
+    while (i < words.length) {
+        let chunkEnd = i + softLimit;
+
+        // If we have enough words left to look ahead
+        if (chunkEnd < words.length) {
+            let foundSentenceEnd = false;
+            // Search for sentence ending within lookAhead range
+            for (let j = 0; j < lookAhead && (chunkEnd + j) < words.length; j++) {
+                const word = words[chunkEnd + j];
+                // Check if word ends with . ? !
+                if (/[.?!]$/.test(word)) {
+                    chunkEnd = chunkEnd + j + 1;
+                    foundSentenceEnd = true;
+                    break;
+                }
+            }
+
+            // If No sentence end found, just take the extra lookAhead words
+            if (!foundSentenceEnd) {
+                chunkEnd = Math.min(chunkEnd + lookAhead, words.length);
+            }
+        } else {
+            chunkEnd = words.length;
+        }
+
+        const chunk = words.slice(i, chunkEnd).join(' ');
         state.chunks.push(chunk);
+        i = chunkEnd;
     }
 
     state.currentChunkIndex = 0;
@@ -612,6 +681,7 @@ async function saveState() {
             pitch: state.settings.pitch,
             volume: state.settings.volume,
             fontSize: state.settings.fontSize,
+            chunkSize: state.settings.chunkSize,
             textAlign: state.settings.textAlign,
             showText: state.settings.showText,
             skipPhrases: state.settings.skipPhrases
@@ -656,6 +726,10 @@ async function loadState() {
         elements.fontSizeRange.value = state.settings.fontSize || 1.2;
         elements.fontSizeVal.textContent = (state.settings.fontSize || 1.2) + 'rem';
         elements.currentText.style.fontSize = (state.settings.fontSize || 1.2) + 'rem';
+
+        elements.chunkSizeRange.value = state.settings.chunkSize || 50;
+        elements.chunkSizeVal.textContent = (state.settings.chunkSize || 50) + ' words';
+
         applyAlignmentUI();
         elements.showTextToggle.checked = state.settings.showText;
         elements.skipPhrasesInput.value = (state.settings.skipPhrases || []).join('\n');
@@ -685,22 +759,38 @@ function upsertCatalog() {
 }
 
 function updateCatalogUI() {
+    let catalogHtml = `
+        <div class="add-new-item" id="addNewDocBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add New Document</span>
+        </div>
+    `;
+
     if (state.catalog.length === 0) {
-        elements.catalogList.innerHTML = '<div class="empty-catalog">No documents yet</div>';
-        return;
+        elements.catalogList.innerHTML = catalogHtml + '<div class="empty-catalog">No other documents</div>';
+    } else {
+        catalogHtml += state.catalog.map(doc => `
+            <div class="catalog-item ${doc.id === state.currentDocID ? 'active' : ''}" data-id="${doc.id}">
+                <span class="catalog-item-title">${doc.fileName}</span>
+                <span class="catalog-item-stats">${Math.round((doc.currentChunkIndex / (doc.chunks.length || 1)) * 100)}% read</span>
+            </div>
+        `).join('');
+        elements.catalogList.innerHTML = catalogHtml;
     }
 
-    elements.catalogList.innerHTML = state.catalog.map(doc => `
-        <div class="catalog-item ${doc.id === state.currentDocID ? 'active' : ''}" data-id="${doc.id}">
-            <span class="catalog-item-title">${doc.fileName}</span>
-            <span class="catalog-item-stats">${Math.round((doc.currentChunkIndex / (doc.chunks.length || 1)) * 100)}% read</span>
-        </div>
-    `).join('');
-
     // Add listeners
+    document.getElementById('addNewDocBtn').addEventListener('click', addNewDocHandler);
+
     document.querySelectorAll('.catalog-item').forEach(item => {
         item.addEventListener('click', async () => {
             const id = item.dataset.id;
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
             if (id === state.currentDocID) return;
             await switchDocument(id);
         });

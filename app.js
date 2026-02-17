@@ -232,7 +232,7 @@ elements.prevBtn.addEventListener('click', () => navigateChunk(-1));
 elements.nextBtn.addEventListener('click', () => navigateChunk(1));
 elements.fastPrevBtn.addEventListener('click', () => navigateChunk(-10));
 elements.fastNextBtn.addEventListener('click', () => navigateChunk(10));
-elements.closeDocBtn.addEventListener('click', closeDocument);
+// closeDocBtn removed from reader header
 const addNewDocHandler = async () => {
     if (state.currentDocID) await saveState();
     await stopPlayback();
@@ -400,12 +400,12 @@ function sanitizePdfText(str) {
     if (!str) return "";
 
     return str
-        // 1. Normalize Unicode (decomposes combined characters like accents)
+        // 1. Normalize Unicode
         .normalize('NFC')
-        // 2. Replace all whitespace types (\s includes NBSP, tabs, line breaks) with a standard space
-        .replace(/\s+/g, ' ')
-        // 3. Remove non-printable/control characters (ASCII 0-31 and 127-159)
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
+        // 2. Replace horizontal whitespace with standard space, preserve \n
+        .replace(/[^\S\r\n]+/g, ' ')
+        // 3. Remove non-printable/control characters (except \n)
+        .replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, "")
         .trim();
 }
 
@@ -775,8 +775,17 @@ function updateCatalogUI() {
     } else {
         catalogHtml += state.catalog.map(doc => `
             <div class="catalog-item ${doc.id === state.currentDocID ? 'active' : ''}" data-id="${doc.id}">
-                <span class="catalog-item-title">${doc.fileName}</span>
-                <span class="catalog-item-stats">${Math.round((doc.currentChunkIndex / (doc.chunks.length || 1)) * 100)}% read</span>
+                <div class="catalog-item-content">
+                    <span class="catalog-item-title">${doc.fileName}</span>
+                    <span class="catalog-item-stats">${Math.round((doc.currentChunkIndex / (doc.chunks.length || 1)) * 100)}% read</span>
+                </div>
+                <button class="delete-doc-btn" data-id="${doc.id}" title="Remove Document">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
         `).join('');
         elements.catalogList.innerHTML = catalogHtml;
@@ -786,7 +795,10 @@ function updateCatalogUI() {
     document.getElementById('addNewDocBtn').addEventListener('click', addNewDocHandler);
 
     document.querySelectorAll('.catalog-item').forEach(item => {
-        item.addEventListener('click', async () => {
+        item.addEventListener('click', async (e) => {
+            // Don't switch if delete button was clicked
+            if (e.target.closest('.delete-doc-btn')) return;
+
             const id = item.dataset.id;
             if (window.innerWidth <= 768) {
                 closeSidebar();
@@ -795,6 +807,31 @@ function updateCatalogUI() {
             await switchDocument(id);
         });
     });
+
+    // Add delete listeners
+    document.querySelectorAll('.delete-doc-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (confirm('Are you sure you want to remove this document?')) {
+                await deleteDocument(id);
+            }
+        });
+    });
+}
+
+async function deleteDocument(id) {
+    // If we're deleting the current doc, close it first
+    if (id === state.currentDocID) {
+        await closeDocument();
+    }
+
+    // Remove from in-memory catalog
+    state.catalog = state.catalog.filter(doc => doc.id !== id);
+
+    // Save updated catalog to DB
+    await saveState();
+    updateCatalogUI();
 }
 
 async function switchDocument(id) {
